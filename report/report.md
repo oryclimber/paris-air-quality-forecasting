@@ -14,6 +14,18 @@ All code, tables and plots are in `notebooks/time_series_challenge.ipynb`. MAE i
 - *Yearly:* NO2, CO and PM2.5 peak in winter (January), O3 peaks in June (monthly means differ by 2.3×), and PM10 peaks in March. The long plot also shows short pollution episodes, for example early October 2023.
 - *Relations:* PM10 and PM2.5 move together (correlation 0.89), NO2 and CO are positively linked (0.71), and O3 is negatively linked to NO2 (−0.64).
 
+
+![Figure 1. The five pollutant series, 2020–2024.](figures/01_pollutants_overview.png)
+*Figure 1. The five pollutant series, 2020–2024.*
+
+
+![Figure 2. One-week view (December 2023): daily cycles and the weekend dip.](figures/02_one_week.png)
+*Figure 2. One-week view (December 2023): daily cycles and the weekend dip.*
+
+
+![Figure 3. One-day view (2 January 2023): hourly pattern of each pollutant.](figures/03_one_day.png)
+*Figure 3. One-day view (2 January 2023): hourly pattern of each pollutant.*
+
 **Missing values.** The share missing is NO2 8%, CO 31%, O3 1.7%, PM10 17.5% and PM2.5 4.4%. CO has one gap of 10,949 hours. The rules, all computed from training data only:
 - Negative O3 values are set to missing.
 - Gaps of 6 hours or less are forward-filled.
@@ -29,6 +41,10 @@ We built two baselines: **persistence** (repeat the last value) and **seasonal n
 **Why a 168-hour lag?** It is the length of one full week, so it keeps both the hour of the day and the day of the week. Urban pollution follows traffic and human activity, which are different on weekdays and weekends: NO2 is 1.39× higher on weekdays than on Sundays. A 24-hour lag copies the wrong kind of day around weekends, while 168 hours always compares like with like. In our validation it helped only for O3 (17.5 vs 18.6 for persistence). Overall it was worse than persistence (8.6 vs 6.9), because the weekly signal is weak for PM and the last week before validation had unusually high pollution. Longer lags (336 hours) copy older episodes and are worse still.
 
 **Why report MAE per pollutant?** The average is in raw units, so it is dominated by O3 and NO2 (tens of µg/m³) while CO (0.04 mg/m³) hardly counts. Pollutants also have different patterns, so a model can be best on one and worst on another. In our results, the best model on average is not the best for every pollutant (see section 5).
+
+![Figure 4. Baselines against the observed validation values. Seasonal naive repeats the last week, including its pollution episode.](figures/04_baselines_validation.png)
+*Figure 4. Baselines against the observed validation values. Seasonal naive repeats the last week, including its pollution episode.*
+
 
 ## 3. Time-series foundation models
 
@@ -71,9 +87,25 @@ Validation MAE (same period, same metric):
 
 **Which model is best overall? Best for every pollutant?** The LSTM is best overall (average MAE 6.70). It is not best for every pollutant: persistence wins NO2, PM10 and PM2.5. The average hides this, and it is also dominated by O3 and NO2 because it is in raw units. As a share of each pollutant's mean level, the ranking by pollutant is clearer (see the bar chart in the notebook).
 
+![Figure 5. Validation MAE per pollutant as a percentage of the pollutant's mean level.](figures/05_mae_per_pollutant.png)
+*Figure 5. Validation MAE per pollutant as a percentage of the pollutant's mean level.*
+
+
 **Horizon.** Errors usually grow from week 1 to week 3. The average error as a share of the mean level goes from 40% to 58% for Chronos-2 joint, and from 27% to 33% for the LSTM. Persistence stays flat at about 29%, so it does not degrade over this window. Chronos-2 on NO2 gets worse from 53% to 81%.
 
+![Figure 6. MAE by week of the horizon (average over pollutants, % of mean level).](figures/06_mae_by_week.png)
+*Figure 6. MAE by week of the horizon (average over pollutants, % of mean level).*
+
+
 **Where does the foundation model fail compared with seasonal naive?** Joint Chronos-2 is worse than seasonal naive on all five pollutants, most clearly NO2 (14.8 vs 11.0) and CO (0.081 vs 0.045). The reason is visible in the observed-vs-predicted plot. The model reproduces the daily shape well, but its level is wrong: it reverts to the level of its recent context, the two polluted weeks before validation (mean NO2 about 39 µg/m³), and forecasts about 32 µg/m³ when the validation period was cleaner (about 18). Seasonal naive copies the previous week, whose level is closer to the next days. The one-per-pollutant Chronos-2 beats seasonal naive on PM10 and PM2.5.
+
+![Figure 7. Observed vs predicted values over the validation period. Chronos-2 (green) keeps the daily shape but sits above the observed level for NO2, CO, PM10 and PM2.5.](figures/07_observed_vs_predicted.png)
+*Figure 7. Observed vs predicted values over the validation period. Chronos-2 (green) keeps the daily shape but sits above the observed level for NO2, CO, PM10 and PM2.5.*
+
+
+![Figure 8. Daily MAE of Chronos-2 joint minus seasonal naive (% of mean level; red = Chronos worse).](figures/08_daily_gap_chronos_vs_snaive.png)
+*Figure 8. Daily MAE of Chronos-2 joint minus seasonal naive (% of mean level; red = Chronos worse).*
+
 
 **Three limitations.**
 - *Data:* the data are one series per pollutant, with no weather or traffic variables, and with a lot of missing data (CO 31%, including a 10,949-hour gap). The imputation is simple and affects what the models learn.
@@ -83,3 +115,7 @@ Validation MAE (same period, same metric):
 ## 6. Final forecast
 
 The final method was chosen with validation results only: the lowest average MAE, which is the LSTM. It was retrained on all available data (up to 2024-09-03 22:00) and used to forecast the 504 hours of the test period. The file `submission.csv` has the `id` column exactly as in `test.csv`, then NO2, CO, O3, PM10 and PM2.5 in the same order as `train.csv`. The notebook checks the columns, the 504 rows in test order, the absence of missing values and the absence of negative values.
+
+![Figure 9. The last four weeks of history followed by the final 504-hour forecast (LSTM).](figures/09_final_forecast.png)
+*Figure 9. The last four weeks of history followed by the final 504-hour forecast (LSTM).*
+
