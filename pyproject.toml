@@ -1,0 +1,24 @@
+[project]
+name = "paris-air-quality-forecasting"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Olivia Young", email = "orose29@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "chronos-forecasting>=2.1",
+    "ipykernel>=7.4.0",
+    "nbformat>=5.11.1",
+    "pandas>=3.0.6",
+    "plotly>=7.1.0",
+    "torch>=2.14.1",
+]
+
+[project.scripts]
+paris-air-quality-forecasting = "paris_air_quality_forecasting:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
